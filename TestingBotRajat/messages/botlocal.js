@@ -47,7 +47,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
     ])
 .matches('profile', [
     function (session) {
-        updateAddress();
+        updateAddress(session);
         session.beginDialog('/profile');
     },
     function (session, results) {
@@ -177,11 +177,11 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
 		session.dialogData.website = builder.EntityRecognizer.findEntity(args.entities, 'blocking::website');
 		session.dialogData.time = builder.EntityRecognizer.findEntity(args.entities, 'blocking::time');
 		session.dialogData.time = session.dialogData.time ? session.dialogData.time.entity : "Inf";
-		// session.send(args);
-		// console.log(session.userData.childArray[0]);
+		//session.send(args);
+		//console.log(session.userData.childArray[0]);
 		if(!session.dialogData.name) {
 			session.sendTyping();
-			// console.log(session.userData.childArray[0]);
+			//console.log(session.userData.childArray[0]);
 			builder.Prompts.choice(session, "Sorry, I couldn't understand the name. Could you repeat?", session.userData.childArray);
 		} else {
 			session.dialogData.name = session.dialogData.name.entity;
@@ -190,6 +190,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
 	},
 	function (session, results, next) {
 		if(results.response) {
+            console.log(results.response.entity);
 			session.dialogData.name=results.response.entity;
 		}
 		if(!session.dialogData.website) {
@@ -247,7 +248,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
         //session.send(args);
         if(!session.dialogData.name) {
             session.sendTyping();
-            builder.Prompts.text(session, "Sorry, I couldn't understand the name. Could you repeat?");
+            builder.Prompts.choice(session, "Sorry, I couldn't understand the name. Could you repeat?", session.userData.childArray);
         } else {
             session.dialogData.name = session.dialogData.name.entity;
             next();
@@ -304,7 +305,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
 	},
 	function (session, results, next) {
 		if(results.response) {
-			session.dialogData.name = results.response;
+			session.dialogData.name = results.response.entity;
 		}
 		if(!session.dialogData.website) {
 			session.sendTyping();
@@ -353,7 +354,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
     },
     function (session, results, next) {
         if(results.response) {
-            session.dialogData.name = results.response;
+            session.dialogData.name = results.response.entity;
         }
         if(!session.dialogData.website) {
             session.sendTyping();
@@ -476,19 +477,20 @@ bot.dialog('/profile', [
         		var res = JSON.parse(body);
         		if(res.text.success==true) {
         			session.userData.childArray = [].concat(res.text.childArray);
-                    // console.log(session.userData.childArray[0]);
+                    console.log("Here: "+session.userData.childArray[0]);
+                    session.endDialog();
                     // console.log(session.userData.childArray[1]);
         		} else {
         			session.sendTyping();
         			session.send("I guess you've added no children yet. And maybe this extension is not for you. :D");
+                    session.endDialog();
         		}
         	} else {
         		session.sendTyping();
         		session.send("Your data is wrong, you need to \"Change your profile info\"");
+                session.endDialog();
         	}
-        })
-        // console.log(session.userData.childArray[0]);
-        session.endDialog();
+        });
     }
 ]);
 
