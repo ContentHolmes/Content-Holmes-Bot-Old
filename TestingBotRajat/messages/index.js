@@ -494,6 +494,7 @@ bot.dialog('/profile', [
 ]);
 
 socket.on('servermsg', function(data) {
+    data = JSON.parse(data);
     var address = JSON.parse(data.address);
     var notification = data.notification;
     var msg = new builder.Message()

@@ -243,6 +243,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
         session.dialogData.name = builder.EntityRecognizer.findEntity(args.entities, 'blocking::name');
         session.dialogData.website = builder.EntityRecognizer.findEntity(args.entities, 'blocking::website');
         session.dialogData.time = builder.EntityRecognizer.findEntity(args.entities, 'blocking::time');
+        //session.dialogData.time = session.dialogData.time.entity;
         session.dialogData.website = session.dialogData.website ? session.dialogData.website.entity : "Inf";
         //session.send(args);
         if(!session.dialogData.name) {
@@ -269,7 +270,6 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
         if(results.response) { 
             session.dialogData.time = results.response;
         }
-        
         //Communication goes here!
         request('http://tfoxtrip.com/session/?email='+session.userData.email+'&password='+session.userData.password+'&childName='+session.dialogData.name+'&url='+session.dialogData.website+'&duration='+session.dialogData.time, function(error, response, body) {
             if(!error) {
@@ -494,6 +494,7 @@ bot.dialog('/profile', [
 ]);
 
 socket.on('servermsg', function(data) {
+	data = JSON.parse(data);
     var address = JSON.parse(data.address);
     var notification = data.notification;
     var msg = new builder.Message()
