@@ -10,7 +10,6 @@ var botbuilder_azure = require("botbuilder-azure");
 // });
 
 var useEmulator = true;
-
 var connector = useEmulator ? new builder.ChatConnector() : new botbuilder_azure.BotServiceConnector({
     appId: process.env['MicrosoftAppId'],
     appPassword: process.env['MicrosoftAppPassword'],
@@ -60,7 +59,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
         session.dialogData.childname = builder.EntityRecognizer.findEntity(args.entities, 'childname');
         if(!session.dialogData.childname) {
             session.sendTyping();
-            builder.Prompts.text(session, "Sorry, I couldn't understand the name. Could you repeat?");
+            builder.Prompts.choice(session, "Sorry, I couldn't understand the name. Could you repeat?", session.userData.childArray);
         } else {
             session.dialogData.childname = session.dialogData.childname.entity;
             next();
@@ -68,7 +67,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
     },
     function (session, results, next) {
         if(results.response) {
-            session.dialogData.childname = results.response;
+            session.dialogData.childname = results.response.entity;
         }
         console.log('http://tfoxtrip.com/data/?email='+session.userData.email+'&password='+session.userData.password+'&childName='+session.dialogData.childname);
         //Communication goes here.
@@ -218,7 +217,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
         // session
         
         //Communication goes here!
-        session.send('http://tfoxtrip.com/blockURL/?email='+session.userData.email+'&password='+session.userData.password+'&childName='+session.dialogData.name+'&url='+session.dialogData.website);
+        //session.send('http://tfoxtrip.com/blockURL/?email='+session.userData.email+'&password='+session.userData.password+'&childName='+session.dialogData.name+'&url='+session.dialogData.website);
         request('http://tfoxtrip.com/blockURL/?email='+session.userData.email+'&password='+session.userData.password+'&childName='+session.dialogData.name+'&url='+session.dialogData.website+'&duration='+expirytime, function (error, response, body) {
             if(!error) {
                 session.sendTyping();
@@ -243,7 +242,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
         session.dialogData.name = builder.EntityRecognizer.findEntity(args.entities, 'blocking::name');
         session.dialogData.website = builder.EntityRecognizer.findEntity(args.entities, 'blocking::website');
         session.dialogData.time = builder.EntityRecognizer.findEntity(args.entities, 'blocking::time');
-        //session.dialogData.time = session.dialogData.time.entity;
+        session.dialogData.time = session.dialogData.time.entity;
         session.dialogData.website = session.dialogData.website ? session.dialogData.website.entity : "Inf";
         //session.send(args);
         if(!session.dialogData.name) {
@@ -276,7 +275,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
                 session.sendTyping();
                 var res = JSON.parse(body);
                 if(res.text.success==true) {
-                    session.send("Session timings on %s are now effective for %s.", session.dialogData.website, session.dialogData.name);
+                    session.send("Session timings now effective for %s.", session.dialogData.name);
                 } else {
                     session.send("Oops. Watson... This doesn't seem good.");
                 }
@@ -355,13 +354,14 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
         if(results.response) {
             session.dialogData.name = results.response.entity;
         }
-        if(!session.dialogData.website) {
-            session.sendTyping();
-            builder.Prompts.text(session, "I couldn't recognize the website. Please re-enter.");
-        } else {
-            session.dialogData.website = session.dialogData.website.entity;
-            next();
-        }
+        // if(!session.dialogData.website) {
+        //     session.sendTyping();
+        //     builder.Prompts.text(session, "I couldn't recognize the website. Please re-enter.");
+        // } else {
+        //     session.dialogData.website = session.dialogData.website.entity;
+        //     next();
+        // }
+        next();
     },
     function (session, results, next) {
         if(results.response) {
@@ -408,7 +408,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
         session.dialogData.childname = builder.EntityRecognizer.findEntity(args.entities, 'childname');
         if(!session.dialogData.childname) {
             session.sendTyping();
-            builder.Prompts.text(session, "Sorry, I couldn't understand the name. Could you repeat?");
+            builder.Prompts.choice(session, "Sorry, I couldn't understand the name. Could you repeat?", session.userData.childArray);
         } else {
             session.dialogData.childname = session.dialogData.childname.entity;
             next();
@@ -416,7 +416,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
     },
     function (session, results, next) {
         if(results.response) {
-            session.dialogData.childname = results.response;
+            session.dialogData.childname = results.response.entity;
         }
 
         //Communication goes here.
@@ -428,8 +428,10 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
                     session.send("Depression Analysis Report for %s - ", session.dialogData.childname);
                     res.text.answers.history.depressionScores.forEach(function(item,index) {
                         if(item.childName==session.dialogData.childname) {
-                            item.time = new Date(item.time);
-                            session.send(item.time.getDate()+"/"+(item.time.getMonth()+1)+"/"+item.time.getFullYear()+":   "+depressionlookup(item.score));
+                            item.allScores.forEach(function(item, index) {
+                                item.time = new Date(item.time);
+                                session.send(item.time.getDate()+"/"+(item.time.getMonth()+1)+"/"+item.time.getFullYear()+":   "+depressionlookup(item.score));
+                            })
                         }
                     });
                 } else {
@@ -493,8 +495,28 @@ bot.dialog('/profile', [
     }
 ]);
 
+bot.dialog('firstRun', [
+	function(session) {
+    	session.userData.version = 1.0;
+    	session.send("Hey! Welcome to Content Holmes. If you've not installed the extension, visit contentholmes.com to check it out.");
+    	session.beginDialog('/profile');
+	},
+	function(session, results) {
+		session.sendTyping();
+		session.send("Hello %s!", session.userData.name);
+	}]).triggerAction({
+    onFindAction: function (context, callback) {
+        var ver = context.userData.version || 0;
+        var score = ver < 1.0 ? 1.1 : 0.0;
+        callback(null, score);
+    },
+    onInterrupted: function(session, dialogId, dialogArgs, next) {
+        session.send("Sorry... We need some info from you first");
+    }
+});
+
 socket.on('servermsg', function(data) {
-	data = JSON.parse(data);
+    data = JSON.parse(data);
     var address = JSON.parse(data.address);
     var notification = data.notification;
     var msg = new builder.Message()

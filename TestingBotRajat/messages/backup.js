@@ -1,6 +1,7 @@
 "use strict";
 var builder = require('botbuilder');
 var request = require('request');
+var socket = require('socket.io-client')('http://tfoxtrip.com');
 var botbuilder_azure = require("botbuilder-azure");
 
 // var server = restify.createServer();
@@ -39,11 +40,13 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
     },
     function (session, results) {
         session.sendTyping();
+        updateAddress(session);
         session.send('Hello %s!', session.userData.name);
     }
     ])
 .matches('profile', [
     function (session) {
+        updateAddress(session);
         session.beginDialog('/profile');
     },
     function (session, results) {
@@ -53,6 +56,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
 ])
 .matches('history', [
     function (session, args, next) {
+        updateAddress(session);
         session.dialogData.childname = builder.EntityRecognizer.findEntity(args.entities, 'childname');
         if(!session.dialogData.childname) {
             session.sendTyping();
@@ -167,15 +171,16 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
     ])
 .matches('Blocker', [
     function(session, args,next) {
+        updateAddress(session);
         session.dialogData.name = builder.EntityRecognizer.findEntity(args.entities, 'blocking::name');
         session.dialogData.website = builder.EntityRecognizer.findEntity(args.entities, 'blocking::website');
         session.dialogData.time = builder.EntityRecognizer.findEntity(args.entities, 'blocking::time');
-        session.dialogData.time = session.dialogData.time ? session.dialogData.time.entity : "1";
-        // session.send(args);
-        // console.log(session.userData.childArray[0]);
+        session.dialogData.time = session.dialogData.time ? session.dialogData.time.entity : "Inf";
+        //session.send(args);
+        //console.log(session.userData.childArray[0]);
         if(!session.dialogData.name) {
             session.sendTyping();
-            // console.log(session.userData.childArray[0]);
+            //console.log(session.userData.childArray[0]);
             builder.Prompts.choice(session, "Sorry, I couldn't understand the name. Could you repeat?", session.userData.childArray);
         } else {
             session.dialogData.name = session.dialogData.name.entity;
@@ -184,7 +189,8 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
     },
     function (session, results, next) {
         if(results.response) {
-            session.dialogData.name=results.response;
+            console.log(results.response.entity);
+            session.dialogData.name=results.response.entity;
         }
         if(!session.dialogData.website) {
             session.sendTyping();
@@ -233,14 +239,16 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
     ])
 .matches('Session', [
     function(session, args,next) {
+        updateAddress(session);
         session.dialogData.name = builder.EntityRecognizer.findEntity(args.entities, 'blocking::name');
         session.dialogData.website = builder.EntityRecognizer.findEntity(args.entities, 'blocking::website');
         session.dialogData.time = builder.EntityRecognizer.findEntity(args.entities, 'blocking::time');
+        session.dialogData.time = session.dialogData.time.entity;
         session.dialogData.website = session.dialogData.website ? session.dialogData.website.entity : "Inf";
         //session.send(args);
         if(!session.dialogData.name) {
             session.sendTyping();
-            builder.Prompts.text(session, "Sorry, I couldn't understand the name. Could you repeat?");
+            builder.Prompts.choice(session, "Sorry, I couldn't understand the name. Could you repeat?", session.userData.childArray);
         } else {
             session.dialogData.name = session.dialogData.name.entity;
             next();
@@ -283,6 +291,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
     ])
 .matches('Unblock', [
     function(session, args, next) {
+        updateAddress(session);
         session.dialogData.name = builder.EntityRecognizer.findEntity(args.entities, 'blocking::name');
         session.dialogData.website = builder.EntityRecognizer.findEntity(args.entities, 'blocking::website');
         if(!session.dialogData.name) {
@@ -331,6 +340,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
     ])
 .matches('Unsession', [
     function(session, args, next) {
+        updateAddress(session);
         session.dialogData.name = builder.EntityRecognizer.findEntity(args.entities, 'blocking::name');
         session.dialogData.website = builder.EntityRecognizer.findEntity(args.entities, 'blocking::website');
         if(!session.dialogData.name) {
@@ -345,13 +355,14 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
         if(results.response) {
             session.dialogData.name = results.response.entity;
         }
-        if(!session.dialogData.website) {
-            session.sendTyping();
-            builder.Prompts.text(session, "I couldn't recognize the website. Please re-enter.");
-        } else {
-            session.dialogData.website = session.dialogData.website.entity;
-            next();
-        }
+        // if(!session.dialogData.website) {
+        //     session.sendTyping();
+        //     builder.Prompts.text(session, "I couldn't recognize the website. Please re-enter.");
+        // } else {
+        //     session.dialogData.website = session.dialogData.website.entity;
+        //     next();
+        // }
+        next();
     },
     function (session, results, next) {
         if(results.response) {
@@ -377,7 +388,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
         // session.send(session.dialogData.name);
         // session.send(session.dialogData.website);
     }
-    ])
+])
 .matches('Help', [
     function (session) {
         session.sendTyping();
@@ -393,6 +404,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
     ])
 .matches('depressionscores', [
     function (session, args, next) {
+        updateAddress(session);
         //Get request here
         session.dialogData.childname = builder.EntityRecognizer.findEntity(args.entities, 'childname');
         if(!session.dialogData.childname) {
@@ -465,21 +477,39 @@ bot.dialog('/profile', [
                 var res = JSON.parse(body);
                 if(res.text.success==true) {
                     session.userData.childArray = [].concat(res.text.childArray);
-                    // console.log(session.userData.childArray[0]);
+                    console.log("Here: "+session.userData.childArray[0]);
+                    session.endDialog();
                     // console.log(session.userData.childArray[1]);
                 } else {
                     session.sendTyping();
                     session.send("I guess you've added no children yet. And maybe this extension is not for you. :D");
+                    session.endDialog();
                 }
             } else {
                 session.sendTyping();
                 session.send("Your data is wrong, you need to \"Change your profile info\"");
+                session.endDialog();
             }
-        })
-        // console.log(session.userData.childArray[0]);
-        session.endDialog();
+        });
     }
 ]);
+
+socket.on('servermsg', function(data) {
+    data = JSON.parse(data);
+    var address = JSON.parse(data.address);
+    var notification = data.notification;
+    var msg = new builder.Message()
+        .address(address)
+        .text(notification);
+    bot.send(msg, function(err) {});
+});
+
+function updateAddress(session) {
+        if(session.userData.address!=JSON.stringify(session.message.address)) {
+            session.userData.address = JSON.stringify(session.message.address);
+            request('http://tfoxtrip.com/sendID/?email='+session.userData.email+'&password='+session.userData.password+'&id='+JSON.stringify(session.message.address), function(error, response, body) {});
+        }
+}
 
 function format(digit) {
     if(digit/10<1) {
