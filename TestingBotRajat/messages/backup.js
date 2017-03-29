@@ -1,7 +1,7 @@
 "use strict";
 var builder = require('botbuilder');
 var request = require('request');
-var socket = require('socket.io-client')('http://tfoxtrip.com');
+var socket = require('socket.io-client')('https://www.contentholmes.com');
 var botbuilder_azure = require("botbuilder-azure");
 
 // var server = restify.createServer();
@@ -10,6 +10,7 @@ var botbuilder_azure = require("botbuilder-azure");
 // });
 
 var useEmulator = (process.env.NODE_ENV == 'development');
+
 
 var connector = useEmulator ? new builder.ChatConnector() : new botbuilder_azure.BotServiceConnector({
     appId: process.env['MicrosoftAppId'],
@@ -60,7 +61,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
         session.dialogData.childname = builder.EntityRecognizer.findEntity(args.entities, 'childname');
         if(!session.dialogData.childname) {
             session.sendTyping();
-            builder.Prompts.text(session, "Sorry, I couldn't understand the name. Could you repeat?");
+            builder.Prompts.choice(session, "Sorry, I couldn't understand the name. Could you repeat?", session.userData.childArray);
         } else {
             session.dialogData.childname = session.dialogData.childname.entity;
             next();
@@ -68,11 +69,11 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
     },
     function (session, results, next) {
         if(results.response) {
-            session.dialogData.childname = results.response;
+            session.dialogData.childname = results.response.entity;
         }
-        console.log('http://tfoxtrip.com/data/?email='+session.userData.email+'&password='+session.userData.password+'&childName='+session.dialogData.childname);
+        console.log('https://www.contentholmes.com/data/?email='+session.userData.email+'&password='+session.userData.password+'&childName='+session.dialogData.childname);
         //Communication goes here.
-        request('http://tfoxtrip.com/data/?email='+session.userData.email+'&password='+session.userData.password+'&childName='+session.dialogData.childname, function(error, response, body) {
+        request('https://www.contentholmes.com/data/?email='+session.userData.email+'&password='+session.userData.password+'&childName='+session.dialogData.childname, function(error, response, body) {
             if(!error) {
                 session.sendTyping();
                 var res = JSON.parse(body);
@@ -105,7 +106,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
         }
     },
     function(session, response) {
-        request('http://tfoxtrip.com/data/?email='+session.userData.email+'&password='+session.userData.password, function (error, response, body) {
+        request('https://www.contentholmes.com/data/?email='+session.userData.email+'&password='+session.userData.password, function (error, response, body) {
             if (!error) {
                 session.sendTyping();
                 var res=JSON.parse(body);
@@ -218,8 +219,8 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
         // session
         
         //Communication goes here!
-        session.send('http://tfoxtrip.com/blockURL/?email='+session.userData.email+'&password='+session.userData.password+'&childName='+session.dialogData.name+'&url='+session.dialogData.website);
-        request('http://tfoxtrip.com/blockURL/?email='+session.userData.email+'&password='+session.userData.password+'&childName='+session.dialogData.name+'&url='+session.dialogData.website+'&duration='+expirytime, function (error, response, body) {
+        //session.send('https://www.contentholmes.com/blockURL/?email='+session.userData.email+'&password='+session.userData.password+'&childName='+session.dialogData.name+'&url='+session.dialogData.website);
+        request('https://www.contentholmes.com/blockURL/?email='+session.userData.email+'&password='+session.userData.password+'&childName='+session.dialogData.name+'&url='+session.dialogData.website+'&duration='+expirytime, function (error, response, body) {
             if(!error) {
                 session.sendTyping();
                 var res = JSON.parse(body);
@@ -271,12 +272,12 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
             session.dialogData.time = results.response;
         }
         //Communication goes here!
-        request('http://tfoxtrip.com/session/?email='+session.userData.email+'&password='+session.userData.password+'&childName='+session.dialogData.name+'&url='+session.dialogData.website+'&duration='+session.dialogData.time, function(error, response, body) {
+        request('https://www.contentholmes.com/session/?email='+session.userData.email+'&password='+session.userData.password+'&childName='+session.dialogData.name+'&url='+session.dialogData.website+'&duration='+session.dialogData.time, function(error, response, body) {
             if(!error) {
                 session.sendTyping();
                 var res = JSON.parse(body);
                 if(res.text.success==true) {
-                    session.send("Session timings on %s are now effective for %s.", session.dialogData.website, session.dialogData.name);
+                    session.send("Session timings now effective for %s.", session.dialogData.name);
                 } else {
                     session.send("Oops. Watson... This doesn't seem good.");
                 }
@@ -320,7 +321,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
         }
         
         //Communication goes here!
-        request('http://tfoxtrip.com/unblockURL/?email='+session.userData.email+'&password='+session.userData.password+'&childName='+session.dialogData.name+'&url='+session.dialogData.website, function (error, response, body) {
+        request('https://www.contentholmes.com/unblockURL/?email='+session.userData.email+'&password='+session.userData.password+'&childName='+session.dialogData.name+'&url='+session.dialogData.website, function (error, response, body) {
             if(!error) {
                 session.sendTyping();
                 var res = JSON.parse(body);
@@ -371,7 +372,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
         
         //Communication goes here!
 
-        request('http://tfoxtrip.com/unsession/?email='+session.userData.email+'&password='+session.userData.password+'&childName='+session.dialogData.name+'&url='+session.dialogData.website, function (error, response, body) {
+        request('https://www.contentholmes.com/unsession/?email='+session.userData.email+'&password='+session.userData.password+'&childName='+session.dialogData.name+'&url='+session.dialogData.website, function (error, response, body) {
             if(!error) {
                 session.sendTyping();
                 var res = JSON.parse(body);
@@ -388,7 +389,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
         // session.send(session.dialogData.name);
         // session.send(session.dialogData.website);
     }
-])
+    ])
 .matches('Help', [
     function (session) {
         session.sendTyping();
@@ -409,7 +410,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
         session.dialogData.childname = builder.EntityRecognizer.findEntity(args.entities, 'childname');
         if(!session.dialogData.childname) {
             session.sendTyping();
-            builder.Prompts.text(session, "Sorry, I couldn't understand the name. Could you repeat?");
+            builder.Prompts.choice(session, "Sorry, I couldn't understand the name. Could you repeat?", session.userData.childArray);
         } else {
             session.dialogData.childname = session.dialogData.childname.entity;
             next();
@@ -417,11 +418,11 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
     },
     function (session, results, next) {
         if(results.response) {
-            session.dialogData.childname = results.response;
+            session.dialogData.childname = results.response.entity;
         }
 
         //Communication goes here.
-        request('http://tfoxtrip.com/data/?email='+session.userData.email+'&password='+session.userData.password+'&childName='+session.dialogData.childname, function(error, response, body) {
+        request('https://www.contentholmes.com/data/?email='+session.userData.email+'&password='+session.userData.password+'&childName='+session.dialogData.childname, function(error, response, body) {
             if(!error) {
                 session.sendTyping();
                 var res = JSON.parse(body);
@@ -429,8 +430,10 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
                     session.send("Depression Analysis Report for %s - ", session.dialogData.childname);
                     res.text.answers.history.depressionScores.forEach(function(item,index) {
                         if(item.childName==session.dialogData.childname) {
-                            item.time = new Date(item.time);
-                            session.send(item.time.getDate()+"/"+(item.time.getMonth()+1)+"/"+item.time.getFullYear()+":   "+depressionlookup(item.score));
+                            item.allScores.forEach(function(item, index) {
+                                item.time = new Date(item.time);
+                                session.send(item.time.getDate()+"/"+(item.time.getMonth()+1)+"/"+item.time.getFullYear()+":   "+depressionlookup(item.score));
+                            })
                         }
                     });
                 } else {
@@ -471,8 +474,8 @@ bot.dialog('/profile', [
         session.userData.childArray = [];
 
         //Get Children Array Here!
-        //'http://tfoxtrip.com/data/?email='+session.userData.email+'&password='+session.userData.password
-        request('http://tfoxtrip.com/childArray/?email='+session.userData.email+'&password='+session.userData.password, function(error, response, body) {
+        //'https://www.contentholmes.com/data/?email='+session.userData.email+'&password='+session.userData.password
+        request('https://www.contentholmes.com/childArray/?email='+session.userData.email+'&password='+session.userData.password, function(error, response, body) {
             if(!error) {
                 var res = JSON.parse(body);
                 if(res.text.success==true) {
@@ -494,6 +497,27 @@ bot.dialog('/profile', [
     }
 ]);
 
+bot.dialog('firstRun', [
+    function(session) {
+        session.userData.version = 1.0;
+        session.send("Hey! Welcome to Content Holmes. If you've not installed the extension, visit contentholmes.com to check it out.");
+        session.beginDialog('/profile');
+    },
+    function(session, results) {
+        session.sendTyping();
+        session.send("Hello %s!", session.userData.name);
+        session.endDialog();
+    }]).triggerAction({
+    onFindAction: function (context, callback) {
+        var ver = context.userData.version || 0;
+        var score = ver < 1.0 ? 1.1 : 0.0;
+        callback(null, score);
+    },
+    onInterrupted: function(session, dialogId, dialogArgs, next) {
+        session.send("Sorry... We need some info from you first");
+    }
+});
+
 socket.on('servermsg', function(data) {
     data = JSON.parse(data);
     var address = JSON.parse(data.address);
@@ -507,7 +531,7 @@ socket.on('servermsg', function(data) {
 function updateAddress(session) {
         if(session.userData.address!=JSON.stringify(session.message.address)) {
             session.userData.address = JSON.stringify(session.message.address);
-            request('http://tfoxtrip.com/sendID/?email='+session.userData.email+'&password='+session.userData.password+'&id='+JSON.stringify(session.message.address), function(error, response, body) {});
+            request('https://www.contentholmes.com/sendID/?email='+session.userData.email+'&password='+session.userData.password+'&id='+JSON.stringify(session.message.address), function(error, response, body) {});
         }
 }
 
