@@ -50,7 +50,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
     function (session, args, next) {
         updateAddress(session);
         session.dialogData.childname = builder.EntityRecognizer.findEntity(args.entities, 'childname');
-        if(!session.dialogData.childname||session.userData.childArray.indexOf((session.dialogData.childname).toString().toLowerCase())==-1) {
+        if(!session.dialogData.childname||session.userData.childArray.indexOf((session.dialogData.childname.entity))==-1) {
             session.sendTyping();
             builder.Prompts.choice(session, "Sorry, I couldn't understand the name. Could you repeat the name please?", session.userData.childArray);
         } else {
@@ -170,7 +170,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
         session.dialogData.time = session.dialogData.time ? session.dialogData.time.entity : "Inf";
         //session.send(args);
         //console.log(session.userData.childArray[0]);
-        if(!session.dialogData.name||session.userData.childArray.indexOf((session.dialogData.name).toString().toLowerCase())==-1) {
+        if(!session.dialogData.name||session.userData.childArray.indexOf((session.dialogData.name.entity))==-1) {
             session.sendTyping();
             //console.log(session.userData.childArray[0]);
             builder.Prompts.choice(session, "Sorry, I couldn't understand the name. Could you repeat the name please?", session.userData.childArray);
@@ -238,7 +238,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
         session.dialogData.time = session.dialogData.time.entity;
         session.dialogData.website = session.dialogData.website ? session.dialogData.website.entity : "Inf";
         //session.send(args);
-        if(!session.dialogData.name||session.userData.childArray.indexOf((session.dialogData.name).toString().toLowerCase())==-1) {
+        if(!session.dialogData.name||session.userData.childArray.indexOf((session.dialogData.name.entity))==-1) {
             session.sendTyping();
             builder.Prompts.choice(session, "Sorry, I couldn't understand the name. Could you repeat the name please?", session.userData.childArray);
         } else {
@@ -286,7 +286,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
         updateAddress(session);
         session.dialogData.name = builder.EntityRecognizer.findEntity(args.entities, 'blocking::name');
         session.dialogData.website = builder.EntityRecognizer.findEntity(args.entities, 'blocking::website');
-        if(!session.dialogData.name||session.userData.childArray.indexOf((session.dialogData.name).toString().toLowerCase())==-1) {
+        if(!session.dialogData.name||session.userData.childArray.indexOf((session.dialogData.name.entity))==-1) {
             session.sendTyping();
             builder.Prompts.choice(session, "Sorry, I couldn't understand the name. Could you repeat the name please?", session.userData.childArray);
         } else {
@@ -335,7 +335,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
         updateAddress(session);
         session.dialogData.name = builder.EntityRecognizer.findEntity(args.entities, 'blocking::name');
         session.dialogData.website = builder.EntityRecognizer.findEntity(args.entities, 'blocking::website');
-        if(!session.dialogData.name||session.userData.childArray.indexOf((session.dialogData.name).toString().toLowerCase())==-1) {
+        if(!session.dialogData.name||session.userData.childArray.indexOf((session.dialogData.name.entity))==-1) {
             session.sendTyping();
             builder.Prompts.choice(session, "Sorry, I couldn't understand the name. Could you repeat the name please?", session.userData.childArray);
         } else {
@@ -399,7 +399,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
         updateAddress(session);
         //Get request here
         session.dialogData.childname = builder.EntityRecognizer.findEntity(args.entities, 'childname');
-        if(!session.dialogData.childname||session.userData.childArray.indexOf((session.dialogData.childname).toString().toLowerCase())==-1) {
+        if(!session.dialogData.childname||session.userData.childArray.indexOf((session.dialogData.childname.entity))==-1) {
             session.sendTyping();
             builder.Prompts.choice(session, "Sorry, I couldn't understand the name. Could you repeat the name please?", session.userData.childArray);
         } else {
