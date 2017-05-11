@@ -161,6 +161,50 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
         session.send("Your questions amuse me %s. I once had a Doctor friend who asked such questions.", session.userData.name);
     }
     ])
+.matches('interest', [
+    function(session, args, next) {
+        updateAddress(session);
+        session.dialogData.name = builder.EntityRecognizer.findEntity(args.entities, 'childname');
+        if(!session.dialogData.name||session.userData.childArray.indexOf((session.dialogData.name.entity))==-1) {
+            session.sendTyping();
+            builder.Prompts.choice(session, "Sorry, I couldn't understand the name. Could you repeat the name please?", session.userData.childArray);
+        } else {
+            session.dialogData.name = session.dialogData.name.entity;
+            next();
+        }
+    },
+    function(session, results, next) {
+        if(results.response) {
+            session.dialogData.name = results.response.entity;
+        }
+        session.sendTyping();
+        //Get request here
+        request('https://www.contentholmes.com/interest/?email='+session.userData.email+'&password='+session.userData.password+'&childName='+session.dialogData.name, function(error, response, body) {
+            if(!error) {
+                var res = JSON.parse(body);
+                if(res.text.success==true) {
+                    //Do things here
+                    var carousel = [];
+                    for(var i in res.text.interests) {
+                        carousel.push(new builder.HeroCard(session)
+                                            .title(i.title)
+                                            .buttons([
+                                                builder.CardAction.openURL(session, i.website, "Buy")
+                                            ]));
+                    }
+                    var msg = new builder.Message(session)
+                        .attachmentLayout(builder.AttachmentLayout.carousel)
+                        .attachments(carousel);
+                    builder.Prompts.text(session, msg);
+                } else {
+                    session.send("Your info might be wrong. Can you please try logging in again?");
+                }
+            } else {
+                session.send("Something went wrong. Please \"Change your personal info\"");
+            }
+        });
+    }
+    ])
 .matches('Blocker', [
     function(session, args,next) {
         updateAddress(session);
@@ -181,7 +225,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
     },
     function (session, results, next) {
         if(results.response) {
-            console.log(results.response.entity);
+            // console.log(results.response.entity);
             session.dialogData.name=results.response.entity;
         }
         if(!session.dialogData.website) {
