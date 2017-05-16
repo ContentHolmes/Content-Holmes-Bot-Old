@@ -179,18 +179,25 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
         }
         session.sendTyping();
         //Get request here
-        request('https://www.contentholmes.com/interest/?email='+session.userData.email+'&password='+session.userData.password+'&childName='+session.dialogData.name, function(error, response, body) {
+        request('https://www.contentholmes.com/getinterests/?email='+session.userData.email+'&password='+session.userData.password+'&childName='+session.dialogData.name, function(error, response, body) {
             if(!error) {
                 var res = JSON.parse(body);
+                console.log(res);
                 if(res.text.success==true) {
                     //Do things here
                     var carousel = [];
-                    for(var i in res.text.interests) {
+                    console.log(res.text.interests);
+                    session.send("Here are somethings that your child likes. They'll love it when you gift them something related to it! :-)");
+                    // console.log(res.text.interests);
+                    for(var i = 0; i<res.text.interests.length;i++) {
                         carousel.push(new builder.HeroCard(session)
-                                            .title(i.title)
-                                            .buttons([
-                                                builder.CardAction.openURL(session, i.website, "Buy")
-                                            ]));
+                                            .title(res.text.interests[i].title)
+                                            .text("Buy something related to " + res.text.interests[i].title + " :-O")
+                                            // .buttons([
+                                            //     builder.CardAction.openURL(session, i.website, "Buy")
+                                            // ])
+                                            );
+                        // session.send(i.title);
                     }
                     var msg = new builder.Message(session)
                         .attachmentLayout(builder.AttachmentLayout.carousel)
@@ -548,7 +555,7 @@ bot.dialog('firstRun', [
         if(results.result==true) {
             session.sendTyping();
             session.send("Hello %s!", session.userData.name);
-            updateAddress();
+            // updateAddress();
         } else {
             session.userData.version = 0;
         }
