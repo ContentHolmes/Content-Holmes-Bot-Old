@@ -4,11 +4,6 @@ var request = require('request');
 var socket = require('socket.io-client')('https://www.contentholmes.com');
 var botbuilder_azure = require("botbuilder-azure");
 
-// var server = restify.createServer();
-// server.listen(process.env.port || process.env.PORT || 3978, function () {
-//    console.log('%s listening to %s', server.name, server.url);
-// });
-
 var useEmulator = (process.env.NODE_ENV == 'development');
 
 
@@ -19,14 +14,17 @@ var connector = useEmulator ? new builder.ChatConnector() : new botbuilder_azure
     openIdMetadata: process.env['BotOpenIdMetadata']
 });
 
-// var connector = new builder.ChatConnector({
-//     appId: process.env.MICROSOFT_APP_ID,
-//     appPassword: process.env.MICROSOFT_APP_PASSWORD
-// });
+var version = 1.1;
+
 var bot = new builder.UniversalBot(connector);
-// server.post('/api/messages', connector.listen());
 var model = 'https://westus.api.cognitive.microsoft.com/luis/v2.0/apps/1a3b2f38-149f-4fb6-a60e-b106101431a6?subscription-key=0fefdf81ed3d4b87b94232d361daf8f0';
 var recognizer = new builder.LuisRecognizer(model);
+
+bot.use(builder.Middleware.dialogVersion({ version: version }));
+
+bot.endConversationAction('goodbye', 'Goodbye :)', { matches: /^goodbye/i });
+bot.beginDialogAction('help', '/help', { matches: /^help/i });
+
 var intents = new builder.IntentDialog({ recognizers: [recognizer] })
 .onDefault(builder.DialogAction.send('I\'m not sure what you mean...'))
 .matches('hi', function (session, args) {
@@ -123,13 +121,45 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
     function (session) {
         session.sendTyping();
         session.send("I am your own personal AI bot, capable of understanding normal human speech. You can ask me about -");
-        session.send("1. Recent history of all children");
-        session.send("2. Depression profile of all children");
-        session.send("3. Blocking sites externally for some time for all children");
-        session.send("4. Session Restrictions for daily usage of websites")
-        session.send("5. Change your profile :-)");
-        session.send("Although I work on natural anguage input, and can answer general queries like \"Are you real?\", to get some useful commands that always work, send \"Help\", pretty cheesy right?");
+
+        var carousal = [];
+        carousal.push(new builder.HeroCard(session)
+            .title("Block a website")
+            .buttons([
+                builder.CardAction.postBack(session, "Block", "Block")
+            ])
+        );
+
+        carousal.push(new builder.HeroCard(session)
+            .title("Unbock a website")
+            .buttons([
+                builder.CardAction.postBack(session, "Unblock", "Unblock")
+            ])
+        );
+
+        carousal.push(new builder.HeroCard(session)
+            .title("Put up an internet session")
+            .buttons([
+                builder.CardAction.postBack(session, "Session", "Session")
+            ])
+        );
+
+        carousal.push(new builder.HeroCard(session)
+            .title("Remove an internet session")
+            .buttons([
+                builder.CardAction.postBack(session, "Unsession", "Unsession")
+            ])
+        );
+
+
+        var msg = new builder.Message(session)
+            .attachmentLayout(builder.AttachmentLayout.carousel)
+            .attachments(carousal);
+        builder.Prompts.text(session, msg);
+
+        session.send("Although I work on natural language input, and can answer general queries like \"Are you real?\", to get some useful commands that always work, send \"Help\", pretty cheesy right?");
         session.send("That's all for now %s, the game is on", session.userData.name);
+        session.endDialog();
     }
     ])
 .matches('Name', [
@@ -198,7 +228,6 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
                                             //     builder.CardAction.openURL(session, i.website, "Buy")
                                             // ])
                                             );
-                        // session.send(i.title);
                     }
                     var msg = new builder.Message(session)
                         .attachmentLayout(builder.AttachmentLayout.carousel)
@@ -399,13 +428,6 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
         if(results.response) {
             session.dialogData.name = results.response.entity;
         }
-        // if(!session.dialogData.website) {
-        //     session.sendTyping();
-        //     builder.Prompts.text(session, "I couldn't recognize the website. Please re-enter.");
-        // } else {
-        //     session.dialogData.website = session.dialogData.website.entity;
-        //     next();
-        // }
         next();
     },
     function (session, results, next) {
@@ -546,9 +568,51 @@ bot.dialog('/profile', [
     }
 ]);
 
+bot.dialog('/help', [
+    function(session) {
+        session.sendTyping();
+        session.send("I am your own personal AI bot, capable of understanding normal human speech. You can ask me about -");
+
+        var carousal = [];
+        carousal.push(new builder.HeroCard(session)
+            .title("Block a website")
+            .buttons([
+                builder.CardAction.postBack(session, "Block", "Block")
+            ])
+        );
+
+        carousal.push(new builder.HeroCard(session)
+            .title("Unbock a website")
+            .buttons([
+                builder.CardAction.postBack(session, "Unblock", "Unblock")
+            ])
+        );
+
+        carousal.push(new builder.HeroCard(session)
+            .title("Put up an internet session")
+            .buttons([
+                builder.CardAction.postBack(session, "Session", "Session")
+            ])
+        );
+
+        carousal.push(new builder.HeroCard(session)
+            .title("Remove an internet session")
+            .buttons([
+                builder.CardAction.postBack(session, "Unsession", "Unsession")
+            ])
+        );
+
+
+        var msg = new builder.Message(session)
+            .attachmentLayout(builder.AttachmentLayout.carousel)
+            .attachments(carousal);
+        builder.Prompts.text(session, msg);
+    } 
+]).triggerAction({matches:/^help/i});
+
 bot.dialog('firstRun', [
     function(session) {
-        session.userData.version = 1.0;
+        session.userData.version = version;
         session.send("Hey! Welcome to Content Holmes. If you've not installed the extension, visit contentholmes.com to check it out.");
         session.beginDialog('/profile');
     },
@@ -564,7 +628,7 @@ bot.dialog('firstRun', [
     }]).triggerAction({
     onFindAction: function (context, callback) {
         var ver = context.userData.version || 0;
-        var score = ver < 1.0 ? 1.1 : 0.0;
+        var score = ver < version ? version : 0.0;
         callback(null, score);
     },
     onInterrupted: function(session, dialogId, dialogArgs, next) {

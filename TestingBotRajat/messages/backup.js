@@ -29,39 +29,31 @@ var model = 'https://westus.api.cognitive.microsoft.com/luis/v2.0/apps/1a3b2f38-
 var recognizer = new builder.LuisRecognizer(model);
 var intents = new builder.IntentDialog({ recognizers: [recognizer] })
 .onDefault(builder.DialogAction.send('I\'m not sure what you mean...'))
-.matches('hi', [
-    function (session, args, next) {
-        if (!session.userData.name) {
+.matches('hi', function (session, args) {
             session.sendTyping();
-            session.send('Hey, I am Content Holmes a.k.a CH. I\'ll be your assistant with the app.');
-            session.beginDialog('/profile');
-        } else {
-            next();
-        }
-    },
-    function (session, results) {
-        session.sendTyping();
-        updateAddress(session);
-        session.send('Hello %s!', session.userData.name);
-    }
-    ])
+            session.send("Hello %s!", session.userData.name);
+    })
 .matches('profile', [
     function (session) {
         updateAddress(session);
         session.beginDialog('/profile');
     },
     function (session, results) {
-        session.sendTyping();
-        session.send('Okay! I made the changes %s :-)', session.userData.name);
+        if(results.result==true) {
+            session.sendTyping();
+            session.send('Okay! I made the changes %s :-)', session.userData.name);
+        } else {
+            session.userData.version = 0;
+        }
     }
 ])
 .matches('history', [
     function (session, args, next) {
         updateAddress(session);
         session.dialogData.childname = builder.EntityRecognizer.findEntity(args.entities, 'childname');
-        if(!session.dialogData.childname) {
+        if(!session.dialogData.childname||session.userData.childArray.indexOf((session.dialogData.childname.entity))==-1) {
             session.sendTyping();
-            builder.Prompts.choice(session, "Sorry, I couldn't understand the name. Could you repeat?", session.userData.childArray);
+            builder.Prompts.choice(session, "Sorry, I couldn't understand the name. Could you repeat the name please?", session.userData.childArray);
         } else {
             session.dialogData.childname = session.dialogData.childname.entity;
             next();
@@ -170,6 +162,57 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
         session.send("Your questions amuse me %s. I once had a Doctor friend who asked such questions.", session.userData.name);
     }
     ])
+.matches('interest', [
+    function(session, args, next) {
+        updateAddress(session);
+        session.dialogData.name = builder.EntityRecognizer.findEntity(args.entities, 'childname');
+        if(!session.dialogData.name||session.userData.childArray.indexOf((session.dialogData.name.entity))==-1) {
+            session.sendTyping();
+            builder.Prompts.choice(session, "Sorry, I couldn't understand the name. Could you repeat the name please?", session.userData.childArray);
+        } else {
+            session.dialogData.name = session.dialogData.name.entity;
+            next();
+        }
+    },
+    function(session, results, next) {
+        if(results.response) {
+            session.dialogData.name = results.response.entity;
+        }
+        session.sendTyping();
+        //Get request here
+        request('https://www.contentholmes.com/getinterests/?email='+session.userData.email+'&password='+session.userData.password+'&childName='+session.dialogData.name, function(error, response, body) {
+            if(!error) {
+                var res = JSON.parse(body);
+                console.log(res);
+                if(res.text.success==true) {
+                    //Do things here
+                    var carousel = [];
+                    console.log(res.text.interests);
+                    session.send("Here are somethings that your child likes. They'll love it when you gift them something related to it! :-)");
+                    // console.log(res.text.interests);
+                    for(var i = 0; i<res.text.interests.length;i++) {
+                        carousel.push(new builder.HeroCard(session)
+                                            .title(res.text.interests[i].title)
+                                            .text("Buy something related to " + res.text.interests[i].title + " :-O")
+                                            // .buttons([
+                                            //     builder.CardAction.openURL(session, i.website, "Buy")
+                                            // ])
+                                            );
+                        // session.send(i.title);
+                    }
+                    var msg = new builder.Message(session)
+                        .attachmentLayout(builder.AttachmentLayout.carousel)
+                        .attachments(carousel);
+                    builder.Prompts.text(session, msg);
+                } else {
+                    session.send("Your info might be wrong. Can you please try logging in again?");
+                }
+            } else {
+                session.send("Something went wrong. Please \"Change your personal info\"");
+            }
+        });
+    }
+    ])
 .matches('Blocker', [
     function(session, args,next) {
         updateAddress(session);
@@ -179,10 +222,10 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
         session.dialogData.time = session.dialogData.time ? session.dialogData.time.entity : "Inf";
         //session.send(args);
         //console.log(session.userData.childArray[0]);
-        if(!session.dialogData.name) {
+        if(!session.dialogData.name||session.userData.childArray.indexOf((session.dialogData.name.entity))==-1) {
             session.sendTyping();
             //console.log(session.userData.childArray[0]);
-            builder.Prompts.choice(session, "Sorry, I couldn't understand the name. Could you repeat?", session.userData.childArray);
+            builder.Prompts.choice(session, "Sorry, I couldn't understand the name. Could you repeat the name please?", session.userData.childArray);
         } else {
             session.dialogData.name = session.dialogData.name.entity;
             next();
@@ -190,7 +233,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
     },
     function (session, results, next) {
         if(results.response) {
-            console.log(results.response.entity);
+            // console.log(results.response.entity);
             session.dialogData.name=results.response.entity;
         }
         if(!session.dialogData.website) {
@@ -247,9 +290,9 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
         session.dialogData.time = session.dialogData.time.entity;
         session.dialogData.website = session.dialogData.website ? session.dialogData.website.entity : "Inf";
         //session.send(args);
-        if(!session.dialogData.name) {
+        if(!session.dialogData.name||session.userData.childArray.indexOf((session.dialogData.name.entity))==-1) {
             session.sendTyping();
-            builder.Prompts.choice(session, "Sorry, I couldn't understand the name. Could you repeat?", session.userData.childArray);
+            builder.Prompts.choice(session, "Sorry, I couldn't understand the name. Could you repeat the name please?", session.userData.childArray);
         } else {
             session.dialogData.name = session.dialogData.name.entity;
             next();
@@ -295,9 +338,9 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
         updateAddress(session);
         session.dialogData.name = builder.EntityRecognizer.findEntity(args.entities, 'blocking::name');
         session.dialogData.website = builder.EntityRecognizer.findEntity(args.entities, 'blocking::website');
-        if(!session.dialogData.name) {
+        if(!session.dialogData.name||session.userData.childArray.indexOf((session.dialogData.name.entity))==-1) {
             session.sendTyping();
-            builder.Prompts.choice(session, "Sorry, I couldn't understand the name. Could you repeat?", session.userData.childArray);
+            builder.Prompts.choice(session, "Sorry, I couldn't understand the name. Could you repeat the name please?", session.userData.childArray);
         } else {
             session.dialogData.name = session.dialogData.name.entity;
             next();
@@ -344,9 +387,9 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
         updateAddress(session);
         session.dialogData.name = builder.EntityRecognizer.findEntity(args.entities, 'blocking::name');
         session.dialogData.website = builder.EntityRecognizer.findEntity(args.entities, 'blocking::website');
-        if(!session.dialogData.name) {
+        if(!session.dialogData.name||session.userData.childArray.indexOf((session.dialogData.name.entity))==-1) {
             session.sendTyping();
-            builder.Prompts.choice(session, "Sorry, I couldn't understand the name. Could you repeat?", session.userData.childArray);
+            builder.Prompts.choice(session, "Sorry, I couldn't understand the name. Could you repeat the name please?", session.userData.childArray);
         } else {
             session.dialogData.name = session.dialogData.name.entity;
             next();
@@ -377,7 +420,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
                 session.sendTyping();
                 var res = JSON.parse(body);
                 if(res.text.success==true) {
-                    session.send("Unsessioned %s for %s", session.dialogData.website, session.dialogData.name);
+                    session.send("Removed sessioning for %s", session.dialogData.name);
                 } else {
                     session.send(res.text.reason);
                 }
@@ -408,9 +451,9 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
         updateAddress(session);
         //Get request here
         session.dialogData.childname = builder.EntityRecognizer.findEntity(args.entities, 'childname');
-        if(!session.dialogData.childname) {
+        if(!session.dialogData.childname||session.userData.childArray.indexOf((session.dialogData.childname.entity))==-1) {
             session.sendTyping();
-            builder.Prompts.choice(session, "Sorry, I couldn't understand the name. Could you repeat?", session.userData.childArray);
+            builder.Prompts.choice(session, "Sorry, I couldn't understand the name. Could you repeat the name please?", session.userData.childArray);
         } else {
             session.dialogData.childname = session.dialogData.childname.entity;
             next();
@@ -449,25 +492,31 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
 bot.dialog('/', intents);
 
 bot.dialog('/profile', [
-    function (session) {
-        session.sendTyping();
-        builder.Prompts.text(session, 'What can I call you?');
+    function (session, args, next) {
+        if(args) {
+            session.dialogData.get = args.get;
+            next();
+        } else {
+            session.sendTyping();
+            builder.Prompts.text(session, 'What can I call you?');
+        }
     },
-    // function (session, results) {
-    //     session.sendTyping();
-        // session.userData.name = results.response;
-    //     builder.Prompts.text(session, 'What\'s your child\'s name?');
-    // },
     function (session, results) {
-        // session.userData.child = results.response;
-        session.userData.name = results.response;
-        session.sendTyping();
-        builder.Prompts.text(session, 'Please give me your registered email id');
+        if(session.dialogData.get=="email"||!session.dialogData.get) {
+            session.userData.name = results.response;
+            session.sendTyping();
+            builder.Prompts.text(session, 'Please give me your registered email id');
+        }
     },
     function (session,results) {
-        session.userData.email = results.response;
-        session.sendTyping();
-        builder.Prompts.text(session, 'Please give me your PIN');
+        if(validateEmail(results.response)) {
+            session.userData.email = results.response;
+            session.sendTyping();
+            builder.Prompts.text(session, 'Please give me your PIN');
+        } else {
+            session.send("Invalid email id");
+            session.replaceDialog('/profile', {"get":"email"});
+        }
     },
     function (session, results) {
         session.userData.password = results.response;
@@ -481,17 +530,17 @@ bot.dialog('/profile', [
                 if(res.text.success==true) {
                     session.userData.childArray = [].concat(res.text.childArray);
                     console.log("Here: "+session.userData.childArray[0]);
-                    session.endDialog();
+                    session.endDialogWithResult({"result":true});
                     // console.log(session.userData.childArray[1]);
                 } else {
                     session.sendTyping();
-                    session.send("I guess you've added no children yet. And maybe this extension is not for you. :D");
-                    session.endDialog();
+                    session.send("Invalid Credentials. Please register on http://www.contentholmes.com to avail yourself to my services");
+                    session.endDialogWithResult({"result":false});
                 }
             } else {
                 session.sendTyping();
                 session.send("Your data is wrong, you need to \"Change your profile info\"");
-                session.endDialog();
+                session.endDialogWithResult({"result":true});
             }
         });
     }
@@ -504,8 +553,13 @@ bot.dialog('firstRun', [
         session.beginDialog('/profile');
     },
     function(session, results) {
-        session.sendTyping();
-        session.send("Hello %s!", session.userData.name);
+        if(results.result==true) {
+            session.sendTyping();
+            session.send("Hello %s!", session.userData.name);
+            // updateAddress();
+        } else {
+            session.userData.version = 0;
+        }
         session.endDialog();
     }]).triggerAction({
     onFindAction: function (context, callback) {
@@ -517,6 +571,7 @@ bot.dialog('firstRun', [
         session.send("Sorry... We need some info from you first");
     }
 });
+
 
 socket.on('servermsg', function(data) {
     data = JSON.parse(data);
@@ -535,6 +590,11 @@ function updateAddress(session) {
         }
 }
 
+function validateEmail(email) {
+  var re = /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+  return re.test(email);
+}
+
 function format(digit) {
     if(digit/10<1) {
         return "0"+digit;
@@ -544,20 +604,20 @@ function format(digit) {
 
 function depressionlookup(score) {
     score = parseInt(score);
-    if(score<=-10) {
-        return "Depressed";
-    } else if (score<=-5) {
-        return "Too sad";
-    } else if (score<=-3) {
-        return "Sad, but nothing to worry :-)";
+    if(score<=-30) {
+        return "Depressed ("+score+")";
+    } else if (score<=-15) {
+        return "Too sad ("+score+")";
+    } else if (score<=-9) {
+        return "Sad, but nothing to worry :-) ("+score+")";
     } else if (score<=0) {
-        return "Normal"
-    } else if (score<=2) {
-        return "Somewhat happy";
-    } else if (score<=5) {
-        return "Happy";
+        return "Normal ("+score+")";
+    } else if (score<=6) {
+        return "Somewhat happy ("+score+")";
+    } else if (score<=15) {
+        return "Happy ("+score+")";
     } else {
-        return "Doing extremely well";
+        return "Doing extremely well ("+score+")";
     }
 }
 
