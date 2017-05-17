@@ -21,11 +21,16 @@ var recognizer = new builder.LuisRecognizer(model);
 
 bot.use(builder.Middleware.dialogVersion({ version: version }));
 
-bot.endConversationAction('goodbye', 'Goodbye :)', { matches: /^goodbye/i });
 bot.beginDialogAction('help', '/help', { matches: /^help/i });
+bot.beginDialogAction('login', 'firstRun');
+bot.beginDialogAction('relogin', '/profile');
+bot.endConversationAction('goodbye', 'Goodbye :)', { matches: /^goodbye/i });
 
 var intents = new builder.IntentDialog({ recognizers: [recognizer] })
-.onDefault(builder.DialogAction.send('I\'m not sure what you mean...'))
+.onDefault(function(session) {
+	session.send("I did not understand what you said.");
+	session.beginDialog('/help');
+})
 .matches('hi', function (session, args) {
             session.sendTyping();
             session.send("Hello %s!", session.userData.name);
@@ -130,7 +135,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
         );
 
         carousal.push(new builder.HeroCard(session)
-            .title("Unbock a website")
+            .title("Unblock a website")
             .buttons([
                 builder.CardAction.postBack(session, "Unblock", "Unblock")
             ])
@@ -170,7 +175,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
 .matches('Age', [
     function (session) {
         session.sendTyping();
-        session.send("Well, I first appeared in 1887 in Sir Doyle's works, but I was here long before that. I still have a knack for detective work depite my age :-P.");
+        session.send("Well, I first appeared in 1887 in Sir Doyle's works, but I was here long before that. I still have a knack for detective work despite my age :-P.");
     }
     ])
 .matches('Location', [
@@ -315,9 +320,6 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
         session.dialogData.name = builder.EntityRecognizer.findEntity(args.entities, 'blocking::name');
         session.dialogData.website = builder.EntityRecognizer.findEntity(args.entities, 'blocking::website');
         session.dialogData.time = builder.EntityRecognizer.findEntity(args.entities, 'blocking::time');
-        session.dialogData.time = session.dialogData.time.entity;
-        session.dialogData.website = session.dialogData.website ? session.dialogData.website.entity : "Inf";
-        //session.send(args);
         if(!session.dialogData.name||session.userData.childArray.indexOf((session.dialogData.name.entity))==-1) {
             session.sendTyping();
             builder.Prompts.choice(session, "Sorry, I couldn't understand the name. Could you repeat the name please?", session.userData.childArray);
@@ -334,7 +336,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
             session.sendTyping();
             builder.Prompts.text(session, "I couldn't recognize the time. Please re-enter.");
         } else {
-            session.dialogData.website = session.dialogData.website.entity;
+            session.dialogData.time = session.dialogData.time.entity;
             next();
         }
     },
@@ -570,7 +572,7 @@ bot.dialog('/profile', [
 bot.dialog('/help', [
     function(session) {
         session.sendTyping();
-        session.send("I am your own personal AI bot, capable of understanding normal human speech. You can ask me about -");
+        session.send("Here are some things that you can ask me about!");
 
         var carousal = [];
         carousal.push(new builder.HeroCard(session)
@@ -581,7 +583,7 @@ bot.dialog('/help', [
         );
 
         carousal.push(new builder.HeroCard(session)
-            .title("Unbock a website")
+            .title("Unblock a website")
             .buttons([
                 builder.CardAction.postBack(session, "Unblock", "Unblock")
             ])
@@ -606,6 +608,7 @@ bot.dialog('/help', [
             .attachmentLayout(builder.AttachmentLayout.carousel)
             .attachments(carousal);
         builder.Prompts.text(session, msg);
+        session.endDialog();
     } 
 ]).triggerAction({matches:/^help/i});
 
