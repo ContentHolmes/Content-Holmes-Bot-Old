@@ -24,6 +24,10 @@ bot.use(builder.Middleware.dialogVersion({ version: version }));
 bot.beginDialogAction('help', '/help', { matches: /^help/i });
 bot.beginDialogAction('login', 'firstRun');
 bot.beginDialogAction('relogin', '/profile');
+bot.beginDialogAction('Block', '/actions/Block');
+bot.beginDialogAction('Session', '/actions/Session');
+bot.beginDialogAction('Unblock', '/actions/Unblock');
+bot.beginDialogAction('Unsession', '/actions/Unsession');
 bot.endConversationAction('goodbye', 'Goodbye :)', { matches: /^goodbye/i });
 
 var intents = new builder.IntentDialog({ recognizers: [recognizer] })
@@ -125,42 +129,7 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
     function (session) {
         session.sendTyping();
         session.send("I am your own personal AI bot, capable of understanding normal human speech. You can ask me about -");
-
-        var carousal = [];
-        carousal.push(new builder.HeroCard(session)
-            .title("Block a website")
-            .buttons([
-                builder.CardAction.postBack(session, "Block", "Block")
-            ])
-        );
-
-        carousal.push(new builder.HeroCard(session)
-            .title("Unblock a website")
-            .buttons([
-                builder.CardAction.postBack(session, "Unblock", "Unblock")
-            ])
-        );
-
-        carousal.push(new builder.HeroCard(session)
-            .title("Put up an internet session")
-            .buttons([
-                builder.CardAction.postBack(session, "Session", "Session")
-            ])
-        );
-
-        carousal.push(new builder.HeroCard(session)
-            .title("Remove an internet session")
-            .buttons([
-                builder.CardAction.postBack(session, "Unsession", "Unsession")
-            ])
-        );
-
-
-        var msg = new builder.Message(session)
-            .attachmentLayout(builder.AttachmentLayout.carousel)
-            .attachments(carousal);
-        builder.Prompts.text(session, msg);
-
+        builder.Prompts.text(session, createHelpCarousal(session));
         session.send("Although I work on natural language input, and can answer general queries like \"Are you real?\", to get some useful commands that always work, send \"Help\", pretty cheesy right?");
         session.send("That's all for now %s, the game is on", session.userData.name);
         session.endDialog();
@@ -247,228 +216,26 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
     }
     ])
 .matches('Blocker', [
-    function(session, args,next) {
-        updateAddress(session);
-        session.dialogData.name = builder.EntityRecognizer.findEntity(args.entities, 'blocking::name');
-        session.dialogData.website = builder.EntityRecognizer.findEntity(args.entities, 'blocking::website');
-        session.dialogData.time = builder.EntityRecognizer.findEntity(args.entities, 'blocking::time');
-        session.dialogData.time = session.dialogData.time ? session.dialogData.time.entity : "Inf";
-        //session.send(args);
-        //console.log(session.userData.childArray[0]);
-        if(!session.dialogData.name||session.userData.childArray.indexOf((session.dialogData.name.entity))==-1) {
-            session.sendTyping();
-            //console.log(session.userData.childArray[0]);
-            builder.Prompts.choice(session, "Sorry, I couldn't understand the name. Could you repeat the name please?", session.userData.childArray);
-        } else {
-            session.dialogData.name = session.dialogData.name.entity;
-            next();
-        }
-    },
-    function (session, results, next) {
-        if(results.response) {
-            // console.log(results.response.entity);
-            session.dialogData.name=results.response.entity;
-        }
-        if(!session.dialogData.website) {
-            session.sendTyping();
-            builder.Prompts.text(session, "I couldn't recognize the website. Please re-enter.");
-        } else {
-            session.dialogData.website = session.dialogData.website.entity;
-            next();
-        }
-    },
-    function (session, results, next) {
-        if(results.response) {
-            session.dialogData.website = results.response;
-        }
-        var date = new Date();
-        var expirytime; 
-        if(session.dialogData.time!="Inf") {
-            expirytime= new Date(date.getTime()+parseInt(session.dialogData.time)*3600000);
-        } else {
-            expirytime= new Date();
-        }
-        if(date.getDate()!=expirytime.getDate()) {
-            expirytime = new Date(date.getFullYear(), date.getMonth(), date.getDate(),23,59,0,0);
-        }
-        console.log(expirytime.toString());
-        // session
-        
-        //Communication goes here!
-        //session.send('https://www.contentholmes.com/blockURL/?email='+session.userData.email+'&password='+session.userData.password+'&childName='+session.dialogData.name+'&url='+session.dialogData.website);
-        request('https://www.contentholmes.com/blockURL/?email='+session.userData.email+'&password='+session.userData.password+'&childName='+session.dialogData.name+'&url='+session.dialogData.website+'&duration='+expirytime, function (error, response, body) {
-            if(!error) {
-                session.sendTyping();
-                var res = JSON.parse(body);
-                if(res.text.success==true) {
-                    session.send("Blocked %s for %s for %s hours", session.dialogData.website, session.dialogData.name, session.dialogData.time);
-                } else {
-                    session.send("Oops. This is way ahead of my thinking curve. I seem to have lost my charm.");
-                }
-            } else {
-                session.send("Something went wrong. Please \"Change your personal info\"");
-            }
-        });
-        // session.send(session.dialogData.name);
-        // session.send(session.dialogData.website);
-        // session.send(session.dialogData.time);
+    function(session) {
+    	session.beginDialog('/actions/Block');
     }
     ])
 .matches('Session', [
-    function(session, args,next) {
-        updateAddress(session);
-        session.dialogData.name = builder.EntityRecognizer.findEntity(args.entities, 'blocking::name');
-        session.dialogData.website = builder.EntityRecognizer.findEntity(args.entities, 'blocking::website');
-        session.dialogData.time = builder.EntityRecognizer.findEntity(args.entities, 'blocking::time');
-        if(!session.dialogData.name||session.userData.childArray.indexOf((session.dialogData.name.entity))==-1) {
-            session.sendTyping();
-            builder.Prompts.choice(session, "Sorry, I couldn't understand the name. Could you repeat the name please?", session.userData.childArray);
-        } else {
-            session.dialogData.name = session.dialogData.name.entity;
-            next();
-        }
-    },
-    function (session, results, next) {
-        if(results.response) {
-            session.dialogData.name=results.response.entity;
-        }
-        if(!session.dialogData.time) {
-            session.sendTyping();
-            builder.Prompts.text(session, "I couldn't recognize the time. Please re-enter.");
-        } else {
-            session.dialogData.time = session.dialogData.time.entity;
-            next();
-        }
-    },
-    function (session, results, next) {
-        if(results.response) { 
-            session.dialogData.time = results.response;
-        }
-        //Communication goes here!
-        request('https://www.contentholmes.com/session/?email='+session.userData.email+'&password='+session.userData.password+'&childName='+session.dialogData.name+'&url='+session.dialogData.website+'&duration='+session.dialogData.time, function(error, response, body) {
-            if(!error) {
-                session.sendTyping();
-                var res = JSON.parse(body);
-                if(res.text.success==true) {
-                    session.send("Session timings now effective for %s.", session.dialogData.name);
-                } else {
-                    session.send("Oops. Watson... This doesn't seem good.");
-                }
-            } else {
-                session.send("Hmm... There seems to be some error. Sorry, I guess this functionality is not available for now.");
-            }
-        });
-        // session.send(session.dialogData.name);
-        // session.send(session.dialogData.website);
-        // session.send(session.dialogData.time);
+    function(session) {
+    	// session.beginDialog('/actions/Session');
+    	session.send("LOL");
     }
     ])
 .matches('Unblock', [
-    function(session, args, next) {
-        updateAddress(session);
-        session.dialogData.name = builder.EntityRecognizer.findEntity(args.entities, 'blocking::name');
-        session.dialogData.website = builder.EntityRecognizer.findEntity(args.entities, 'blocking::website');
-        if(!session.dialogData.name||session.userData.childArray.indexOf((session.dialogData.name.entity))==-1) {
-            session.sendTyping();
-            builder.Prompts.choice(session, "Sorry, I couldn't understand the name. Could you repeat the name please?", session.userData.childArray);
-        } else {
-            session.dialogData.name = session.dialogData.name.entity;
-            next();
-        }
-    },
-    function (session, results, next) {
-        if(results.response) {
-            session.dialogData.name = results.response.entity;
-        }
-        if(!session.dialogData.website) {
-            session.sendTyping();
-            builder.Prompts.text(session, "I couldn't recognize the website. Please re-enter.");
-        } else {
-            session.dialogData.website = session.dialogData.website.entity;
-            next();
-        }
-    },
-    function (session, results, next) {
-        if(results.response) {
-            session.dialogData.website = results.response;
-        }
-        
-        //Communication goes here!
-        request('https://www.contentholmes.com/unblockURL/?email='+session.userData.email+'&password='+session.userData.password+'&childName='+session.dialogData.name+'&url='+session.dialogData.website, function (error, response, body) {
-            if(!error) {
-                session.sendTyping();
-                var res = JSON.parse(body);
-                if(res.text.success==true) {
-                    session.send("Unblocked %s for %s", session.dialogData.website, session.dialogData.name);
-                } else {
-                    session.send(res.text.reason);
-                }
-            } else {
-                session.sendTyping();
-                session.send("Okay... I guess your data is wrong. Try \"Changing your info\".");
-            }
-        })
-        // session.send(session.dialogData.name);
-        // session.send(session.dialogData.website);
+    function(session) {
+    	session.beginDialog('/actions/Unblock');
     }
     ])
 .matches('Unsession', [
-    function(session, args, next) {
-        updateAddress(session);
-        session.dialogData.name = builder.EntityRecognizer.findEntity(args.entities, 'blocking::name');
-        session.dialogData.website = builder.EntityRecognizer.findEntity(args.entities, 'blocking::website');
-        if(!session.dialogData.name||session.userData.childArray.indexOf((session.dialogData.name.entity))==-1) {
-            session.sendTyping();
-            builder.Prompts.choice(session, "Sorry, I couldn't understand the name. Could you repeat the name please?", session.userData.childArray);
-        } else {
-            session.dialogData.name = session.dialogData.name.entity;
-            next();
-        }
-    },
-    function (session, results, next) {
-        if(results.response) {
-            session.dialogData.name = results.response.entity;
-        }
-        next();
-    },
-    function (session, results, next) {
-        if(results.response) {
-            session.dialogData.website = results.response;
-        }
-        
-        //Communication goes here!
-
-        request('https://www.contentholmes.com/unsession/?email='+session.userData.email+'&password='+session.userData.password+'&childName='+session.dialogData.name+'&url='+session.dialogData.website, function (error, response, body) {
-            if(!error) {
-                session.sendTyping();
-                var res = JSON.parse(body);
-                if(res.text.success==true) {
-                    session.send("Removed sessioning for %s", session.dialogData.name);
-                } else {
-                    session.send(res.text.reason);
-                }
-            } else {
-                session.sendTyping();
-                session.send("Okay... I guess your data is wrong. Try \"Changing your info\".");
-            }
-        })
-        // session.send(session.dialogData.name);
-        // session.send(session.dialogData.website);
+	function(session) {
+    	session.beginDialog('/actions/Unsession');
     }
-    ])
-.matches('Help', [
-    function (session) {
-        session.sendTyping();
-        session.send("Here are some queries that always work -");
-        session.send("To change your login details - Change my info");
-        session.send("To request Depression Reports - How depressed is <Child name>?");
-        session.send("To block a URL - Block <Site name> for <Child name> for <Time in hours>");
-        session.send("To unblock a URL - Unblock <Site name> for <Child name>");
-        session.send("To issue session timings - Session <Child name>'s <Website name> for <Time>");
-        session.send("To remove session instructions - Unsession <Child name>'s <Website Name>");
-        session.send("--------------That's All Folks--------------");
-    }
-    ])
+])
 .matches('depressionscores', [
     function (session, args, next) {
         updateAddress(session);
@@ -573,49 +340,243 @@ bot.dialog('/help', [
     function(session) {
         session.sendTyping();
         session.send("Here are some things that you can ask me about!");
-
-        var carousal = [];
-        carousal.push(new builder.HeroCard(session)
-            .title("Block a website")
-            .buttons([
-                builder.CardAction.postBack(session, "Block", "Block")
-            ])
-        );
-
-        carousal.push(new builder.HeroCard(session)
-            .title("Unblock a website")
-            .buttons([
-                builder.CardAction.postBack(session, "Unblock", "Unblock")
-            ])
-        );
-
-        carousal.push(new builder.HeroCard(session)
-            .title("Put up an internet session")
-            .buttons([
-                builder.CardAction.postBack(session, "Session", "Session")
-            ])
-        );
-
-        carousal.push(new builder.HeroCard(session)
-            .title("Remove an internet session")
-            .buttons([
-                builder.CardAction.postBack(session, "Unsession", "Unsession")
-            ])
-        );
-
-
-        var msg = new builder.Message(session)
-            .attachmentLayout(builder.AttachmentLayout.carousel)
-            .attachments(carousal);
-        builder.Prompts.text(session, msg);
+        builder.Prompts.text(session, createHelpCarousal(session));
         session.endDialog();
     } 
 ]).triggerAction({matches:/^help/i});
 
+bot.dialog('/actions/Block', [
+	function(session, args,next) {
+        updateAddress(session);
+        if(args) {
+	        session.dialogData.name = builder.EntityRecognizer.findEntity(args.entities, 'blocking::name');
+	        session.dialogData.website = builder.EntityRecognizer.findEntity(args.entities, 'blocking::website');
+	        session.dialogData.time = builder.EntityRecognizer.findEntity(args.entities, 'blocking::time');
+    	}
+        session.dialogData.time = session.dialogData.time ? session.dialogData.time.entity : "Inf";
+        if(!session.dialogData.name||session.userData.childArray.indexOf((session.dialogData.name.entity))==-1) {
+            session.sendTyping();
+            //console.log(session.userData.childArray[0]);
+            builder.Prompts.choice(session, "Block for whom?", session.userData.childArray);
+        } else {
+            session.dialogData.name = session.dialogData.name.entity;
+            next();
+        }
+    },
+    function (session, results, next) {
+        if(results.response) {
+            // console.log(results.response.entity);
+            session.dialogData.name=results.response.entity;
+        }
+        if(!session.dialogData.website) {
+            session.sendTyping();
+            builder.Prompts.text(session, "Can you tell me the website you want to block? I understand names (Eg- Facebook) and categories (Eg- Gaming Websites) as well :-).");
+        } else {
+            session.dialogData.website = session.dialogData.website.entity;
+            next();
+        }
+    },
+    function (session, results, next) {
+        if(results.response) {
+            session.dialogData.website = results.response;
+        }
+        var date = new Date();
+        var expirytime; 
+        if(session.dialogData.time!="Inf") {
+            expirytime= new Date(date.getTime()+parseInt(session.dialogData.time)*3600000);
+        } else {
+            expirytime= new Date();
+        }
+        if(date.getDate()!=expirytime.getDate()) {
+            expirytime = new Date(date.getFullYear(), date.getMonth(), date.getDate(),23,59,0,0);
+        }
+        console.log(expirytime.toString());
+        // session
+        
+        //Communication goes here!
+        //session.send('https://www.contentholmes.com/blockURL/?email='+session.userData.email+'&password='+session.userData.password+'&childName='+session.dialogData.name+'&url='+session.dialogData.website);
+        request('https://www.contentholmes.com/blockURL/?email='+session.userData.email+'&password='+session.userData.password+'&childName='+session.dialogData.name+'&url='+session.dialogData.website+'&duration='+expirytime, function (error, response, body) {
+            if(!error) {
+                session.sendTyping();
+                var res = JSON.parse(body);
+                if(res.text.success==true) {
+                    session.send("Blocked %s for %s for %s hours", session.dialogData.website, session.dialogData.name, session.dialogData.time);
+                } else {
+                    session.send("Oops. This is way ahead of my thinking curve. I seem to have lost my charm.");
+                }
+            } else {
+                session.send("Something went wrong. Please \"Change your personal info\"");
+            }
+        });
+        // session.send(session.dialogData.name);
+        // session.send(session.dialogData.website);
+        // session.send(session.dialogData.time);
+    }
+]);
+
+bot.dialog('/actions/Session',[
+	function(session, args,next) {
+        updateAddress(session);
+        if(args) {
+	        session.dialogData.name = builder.EntityRecognizer.findEntity(args.entities, 'blocking::name');
+	        session.dialogData.website = builder.EntityRecognizer.findEntity(args.entities, 'blocking::website');
+        	session.dialogData.time = builder.EntityRecognizer.findEntity(args.entities, 'blocking::time');
+       	}
+        if(!session.dialogData.name||session.userData.childArray.indexOf((session.dialogData.name.entity))==-1) {
+            session.sendTyping();
+            builder.Prompts.choice(session, "Who do you need sessioning for?", session.userData.childArray);
+        } else {
+            session.dialogData.name = session.dialogData.name.entity;
+            next();
+        }
+    },
+    function (session, results, next) {
+        if(results.response) {
+            session.dialogData.name=results.response.entity;
+        }
+        if(!session.dialogData.time) {
+            session.sendTyping();
+            builder.Prompts.text(session, "How many hours do you need sessioning for?");
+        } else {
+            session.dialogData.time = session.dialogData.time.entity;
+            next();
+        }
+    },
+    function (session, results, next) {
+        if(results.response) { 
+            session.dialogData.time = results.response;
+        }
+        //Communication goes here!
+        request('https://www.contentholmes.com/session/?email='+session.userData.email+'&password='+session.userData.password+'&childName='+session.dialogData.name+'&url='+session.dialogData.website+'&duration='+session.dialogData.time, function(error, response, body) {
+            if(!error) {
+                session.sendTyping();
+                var res = JSON.parse(body);
+                if(res.text.success==true) {
+                    session.send("Session timings now effective for %s.", session.dialogData.name);
+                } else {
+                    session.send("Oops. Watson... This doesn't seem good.");
+                }
+            } else {
+                session.send("Hmm... There seems to be some error. Sorry, I guess this functionality is not available for now.");
+            }
+        });
+        // session.send(session.dialogData.name);
+        // session.send(session.dialogData.website);
+        // session.send(session.dialogData.time);
+    }
+]);
+
+bot.dialog('/actions/Unblock', [
+	function(session, args, next) {
+        updateAddress(session);
+        if(args) {
+	        session.dialogData.name = builder.EntityRecognizer.findEntity(args.entities, 'blocking::name');
+	        session.dialogData.website = builder.EntityRecognizer.findEntity(args.entities, 'blocking::website');
+	    }
+        if(!session.dialogData.name||session.userData.childArray.indexOf((session.dialogData.name.entity))==-1) {
+            session.sendTyping();
+            builder.Prompts.choice(session, "So you want to unblock.. Cool! For whom?", session.userData.childArray);
+        } else {
+            session.dialogData.name = session.dialogData.name.entity;
+            next();
+        }
+    },
+    function (session, results, next) {
+        if(results.response) {
+            session.dialogData.name = results.response.entity;
+        }
+        if(!session.dialogData.website) {
+            session.sendTyping();
+            builder.Prompts.text(session, "Can you tell me the website you want to unblock?");
+        } else {
+            session.dialogData.website = session.dialogData.website.entity;
+            next();
+        }
+    },
+    function (session, results, next) {
+        if(results.response) {
+            session.dialogData.website = results.response;
+        }
+        
+        //Communication goes here!
+        request('https://www.contentholmes.com/unblockURL/?email='+session.userData.email+'&password='+session.userData.password+'&childName='+session.dialogData.name+'&url='+session.dialogData.website, function (error, response, body) {
+            if(!error) {
+                session.sendTyping();
+                var res = JSON.parse(body);
+                if(res.text.success==true) {
+                    session.send("Unblocked %s for %s :-)", session.dialogData.website, session.dialogData.name);
+                } else {
+                    session.send(res.text.reason);
+                }
+            } else {
+                session.sendTyping();
+                session.send("Okay... I guess your data is wrong. Try \"Changing your info\".");
+            }
+        })
+        // session.send(session.dialogData.name);
+        // session.send(session.dialogData.website);
+    }
+]);
+
+bot.dialog('/actions/Unsession',[
+	function(session, args, next) {
+        updateAddress(session);
+        if(args) {
+	        session.dialogData.name = builder.EntityRecognizer.findEntity(args.entities, 'blocking::name');
+	        session.dialogData.website = builder.EntityRecognizer.findEntity(args.entities, 'blocking::website');
+	    }
+        if(!session.dialogData.name||session.userData.childArray.indexOf((session.dialogData.name.entity))==-1) {
+            session.sendTyping();
+            builder.Prompts.choice(session, "Who is the lucky guy getting unsessioned :O? Can you give me his name?", session.userData.childArray);
+        } else {
+            session.dialogData.name = session.dialogData.name.entity;
+            next();
+        }
+    },
+    function (session, results, next) {
+        if(results.response) {
+            session.dialogData.name = results.response.entity;
+        }
+        next();
+    },
+    function (session, results, next) {
+        if(results.response) {
+            session.dialogData.website = results.response;
+        }
+        
+        //Communication goes here!
+
+        request('https://www.contentholmes.com/unsession/?email='+session.userData.email+'&password='+session.userData.password+'&childName='+session.dialogData.name+'&url='+session.dialogData.website, function (error, response, body) {
+            if(!error) {
+                session.sendTyping();
+                var res = JSON.parse(body);
+                if(res.text.success==true) {
+                    session.send("Removed sessioning for %s :-)", session.dialogData.name);
+                } else {
+                    session.send(res.text.reason);
+                }
+            } else {
+                session.sendTyping();
+                session.send("Okay... I guess your data is wrong. Try \"Changing your info\".");
+            }
+        })
+        // session.send(session.dialogData.name);
+        // session.send(session.dialogData.website);
+    }
+]);
+
 bot.dialog('firstRun', [
     function(session) {
         session.userData.version = version;
-        session.send("Hey! Welcome to Content Holmes. If you've not installed the extension, visit contentholmes.com to check it out.");
+        var loginCard = new builder.HeroCard(session)
+            .title("Welcome to Content Holmes")
+            .subtitle("I am your personal assistant ask me anything :-)")
+            .buttons([
+                builder.CardAction.openUrl(session, "https://www.contentholmes.com/auth/facebook", "Sign Up!"),
+                builder.CardAction.openUrl(session, "https://www.contentholmes.com","Visit our website")
+            ]);
+        session.send(new builder.Message(session)
+            .addAttachment(loginCard));
         session.beginDialog('/profile');
     },
     function(session, results) {
@@ -637,7 +598,6 @@ bot.dialog('firstRun', [
         session.send("Sorry... We need some info from you first");
     }
 });
-
 
 socket.on('servermsg', function(data) {
     data = JSON.parse(data);
@@ -685,6 +645,42 @@ function depressionlookup(score) {
     } else {
         return "Doing extremely well ("+score+")";
     }
+}
+
+function createHelpCarousal(session) {
+    var carousal = [];
+    carousal.push(new builder.HeroCard(session)
+        .title("Block a website")
+        .buttons([
+            builder.CardAction.dialogAction(session, "Block", "","Block")
+        ])
+    );
+
+    carousal.push(new builder.HeroCard(session)
+        .title("Unblock a website")
+        .buttons([
+            builder.CardAction.dialogAction(session, "Unblock", "","Unblock")
+        ])
+    );
+
+    carousal.push(new builder.HeroCard(session)
+        .title("Put up an internet session")
+        .buttons([
+            builder.CardAction.dialogAction(session, "Session", "","Session")
+        ])
+    );
+
+    carousal.push(new builder.HeroCard(session)
+        .title("Remove an internet session")
+        .buttons([
+            builder.CardAction.dialogAction(session, "Unsession", "","Unsession")
+        ])
+    );
+    
+    var msg = new builder.Message(session)
+        .attachmentLayout(builder.AttachmentLayout.carousel)
+        .attachments(carousal);
+    return msg;
 }
 
 
