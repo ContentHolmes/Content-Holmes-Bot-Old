@@ -13,7 +13,7 @@ var connector = useEmulator ? new builder.ChatConnector() : new botbuilder_azure
     openIdMetadata: process.env['BotOpenIdMetadata']
 });
 
-var version = 1.1;
+var version = 1.0;
 
 var bot = new builder.UniversalBot(connector);
 var model = 'https://westus.api.cognitive.microsoft.com/luis/v2.0/apps/1a3b2f38-149f-4fb6-a60e-b106101431a6?subscription-key=0fefdf81ed3d4b87b94232d361daf8f0';
@@ -216,24 +216,23 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] })
     }
     ])
 .matches('Blocker', [
-    function(session) {
-    	session.beginDialog('/actions/Block');
+    function(session, args) {
+    	session.beginDialog('/actions/Block', args);
     }
     ])
 .matches('Session', [
-    function(session) {
-    	// session.beginDialog('/actions/Session');
-    	session.send("LOL");
+    function(session, args) {
+    	session.beginDialog('/actions/Session', args);
     }
     ])
 .matches('Unblock', [
-    function(session) {
-    	session.beginDialog('/actions/Unblock');
+    function(session, args) {
+    	session.beginDialog('/actions/Unblock', args);
     }
     ])
 .matches('Unsession', [
-	function(session) {
-    	session.beginDialog('/actions/Unsession');
+	function(session, args) {
+    	session.beginDialog('/actions/Unsession', args);
     }
 ])
 .matches('depressionscores', [
@@ -401,16 +400,18 @@ bot.dialog('/actions/Block', [
                 var res = JSON.parse(body);
                 if(res.text.success==true) {
                     session.send("Blocked %s for %s for %s hours", session.dialogData.website, session.dialogData.name, session.dialogData.time);
+                    session.endDialog();
                 } else {
                     session.send("Oops. This is way ahead of my thinking curve. I seem to have lost my charm.");
+                    session.endDialog();
                 }
             } else {
                 session.send("Something went wrong. Please \"Change your personal info\"");
+                session.endDialog();
             }
         });
         // session.send(session.dialogData.name);
-        // session.send(session.dialogData.website);
-        // session.send(session.dialogData.time);
+        // session.send(session.dialogData.website
     }
 ]);
 
@@ -453,11 +454,14 @@ bot.dialog('/actions/Session',[
                 var res = JSON.parse(body);
                 if(res.text.success==true) {
                     session.send("Session timings now effective for %s.", session.dialogData.name);
+                    session.endDialog();
                 } else {
                     session.send("Oops. Watson... This doesn't seem good.");
+                    session.endDialog();
                 }
             } else {
                 session.send("Hmm... There seems to be some error. Sorry, I guess this functionality is not available for now.");
+                session.endDialog();
             }
         });
         // session.send(session.dialogData.name);
@@ -505,12 +509,15 @@ bot.dialog('/actions/Unblock', [
                 var res = JSON.parse(body);
                 if(res.text.success==true) {
                     session.send("Unblocked %s for %s :-)", session.dialogData.website, session.dialogData.name);
+                    session.endDialog();
                 } else {
                     session.send(res.text.reason);
+                    session.endDialog();
                 }
             } else {
                 session.sendTyping();
                 session.send("Okay... I guess your data is wrong. Try \"Changing your info\".");
+                session.endDialog();
             }
         })
         // session.send(session.dialogData.name);
@@ -552,12 +559,15 @@ bot.dialog('/actions/Unsession',[
                 var res = JSON.parse(body);
                 if(res.text.success==true) {
                     session.send("Removed sessioning for %s :-)", session.dialogData.name);
+					session.endDialog();
                 } else {
                     session.send(res.text.reason);
+                    session.endDialog();
                 }
             } else {
                 session.sendTyping();
                 session.send("Okay... I guess your data is wrong. Try \"Changing your info\".");
+                session.endDialog();
             }
         })
         // session.send(session.dialogData.name);
