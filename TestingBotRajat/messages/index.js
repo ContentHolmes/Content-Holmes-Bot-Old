@@ -292,7 +292,9 @@ bot.dialog('/profile', [
     },
     function (session, results) {
         if(session.dialogData.get=="email"||!session.dialogData.get) {
-            session.userData.name = results.response;
+            if(!session.dialogData.get) {
+                session.userData.name = results.response;
+            }
             session.sendTyping();
             builder.Prompts.text(session, 'Please give me your registered email id');
         }
